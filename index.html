@@ -27,11 +27,24 @@
     <script src="../../assets/js/ie10-viewport-bug-workaround.js"></script>
 
     <script src="main.js"></script>
+    <script src="audio.js"></script>
     <script>
       var node = document.getElementById('main');
       var app = Elm.Main.embed(node);
-      // Note: if your Elm module is named "MyThing.Root" you
-      // would call "Elm.MyThing.Root.embed(node)" instead.
+      var audio = null;
+      app.ports.startAudio.subscribe(function(params) {
+        if (audio) {
+          termAudio(audio);
+          audio = null;
+        }
+        audio = initAudio(params);
+      });
+      app.ports.stopAudio.subscribe(function() {
+        if (audio) {
+          termAudio(audio);
+          audio = null;
+        }
+      });
     </script>
 
   </body>

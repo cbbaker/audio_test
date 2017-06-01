@@ -3,14 +3,16 @@ module Main exposing (..)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
+import Audio
 
 
 main : Program Never Model Msg
 main =
-    Html.beginnerProgram
-        { model = model
+    Html.program
+        { init = init
         , view = view
         , update = update
+        , subscriptions = subscriptions
         }
 
 
@@ -27,9 +29,14 @@ type State
     | Playing
 
 
-model : Model
-model =
-    Stopped
+init : ( Model, Cmd msg )
+init =
+    Stopped ! []
+
+
+subscriptions : Model -> Sub msg
+subscriptions model =
+    Sub.none
 
 
 
@@ -41,14 +48,14 @@ type Msg
     | Stop
 
 
-update : Msg -> Model -> Model
+update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         Start ->
-            Playing
+            Playing ! [ Audio.start 220.0 ]
 
         Stop ->
-            Stopped
+            Stopped ! [ Audio.stop ]
 
 
 
