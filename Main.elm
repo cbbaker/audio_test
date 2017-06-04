@@ -20,8 +20,21 @@ main =
 -- MODEL
 
 
+baseFrequency : Float
+baseFrequency =
+    220.0
+
+
 type alias Model =
-    State
+    { state : State
+    , overtone : Int
+    , gain : Float
+    }
+
+
+frequency : Model -> Float
+frequency { overtone } =
+    baseFrequency * (toFloat overtone)
 
 
 type State
@@ -31,7 +44,7 @@ type State
 
 init : ( Model, Cmd msg )
 init =
-    Stopped ! []
+    Model Stopped 1 1.0 ! []
 
 
 subscriptions : Model -> Sub msg
@@ -46,16 +59,48 @@ subscriptions model =
 type Msg
     = Start
     | Stop
+    | Overtone String
+    | Gain String
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         Start ->
-            Playing ! [ Audio.start 220.0 ]
+            { model | state = Playing } ! [ Audio.start (frequency model) model.gain ]
 
         Stop ->
-            Stopped ! [ Audio.stop ]
+            { model | state = Stopped } ! [ Audio.stop ]
+
+        Overtone overtoneInput ->
+            let
+                overtone =
+                    String.toInt overtoneInput |> Result.withDefault model.overtone
+
+                newModel =
+                    { model | overtone = overtone }
+            in
+                newModel ! startAudio newModel
+
+        Gain gainInput ->
+            let
+                gain =
+                    String.toFloat gainInput |> Result.withDefault model.gain
+
+                newModel =
+                    { model | gain = gain }
+            in
+                newModel ! [ Audio.update gain ]
+
+
+startAudio : Model -> List (Cmd Msg)
+startAudio model =
+    case model.state of
+        Playing ->
+            [ Audio.start (frequency model) model.gain ]
+
+        Stopped ->
+            []
 
 
 
@@ -112,21 +157,53 @@ jumbotron model =
         [ h1 [ class "display-3" ] [ text "Web audio" ]
         , p [ class "lead" ] [ text "Turn on your sound and press the button below to start" ]
         , controls model
+        , button model
         ]
 
 
 controls : Model -> Html Msg
 controls model =
-    case model of
+    Html.form []
+        [ div [ class "form-group" ]
+            [ label [ for "overtoneInput" ] [ text "overtone" ]
+            , input
+                [ type_ "number"
+                , Html.Attributes.min "1"
+                , class "form-control"
+                , id "overtoneInput"
+                , value (toString model.overtone)
+                , onInput Overtone
+                ]
+                []
+            ]
+        , div [ class "form-group" ]
+            [ label [ for "gainInput" ] [ text "gain" ]
+            , input
+                [ type_ "number"
+                , class "form-control"
+                , id "gainInput"
+                , Html.Attributes.min "0"
+                , Html.Attributes.max "1"
+                , value (toString model.gain)
+                , onInput Gain
+                ]
+                []
+            ]
+        ]
+
+
+button : Model -> Html Msg
+button model =
+    case model.state of
         Playing ->
-            button
+            Html.button
                 [ onClick Stop
                 , class "btn btn-lrg btn-danger"
                 ]
                 [ text "Stop" ]
 
         Stopped ->
-            button
+            Html.button
                 [ onClick Start
                 , class "btn btn-lrg btn-success"
                 ]
